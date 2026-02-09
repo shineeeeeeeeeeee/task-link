@@ -1,0 +1,14 @@
+{
+    "name": "task-link",
+    "private": true,
+    "version": "1.0.0",
+    "workspaces": [
+        "frontend",
+        "backend"
+    ],
+    "scripts": {
+        "frontend": "npm run dev -w frontend",
+        "backend": "npm run dev -w backend",
+        "start": "npm run dev --workspaces --if-present"
+    }
+}

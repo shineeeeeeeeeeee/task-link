@@ -1,0 +1,38 @@
+.field.floating {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.field.floating .field-input {
+  width: 100%;
+  padding: 12px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field.floating .field-input:focus {
+  border-color: #007bff;
+}
+
+.field.floating .field-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: #777;
+  font-size: 14px;
+  pointer-events: none;
+  background: #fff;
+  transition: 0.2s ease all;
+}
+
+.field.floating.filled .field-label,
+.field.floating .field-input:focus + .field-label {
+  top: -8px;
+  left: 8px;
+  font-size: 12px;
+  color: #007bff;
+  padding: 0 4px;
+}
