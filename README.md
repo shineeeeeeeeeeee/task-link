@@ -1,6 +1,6 @@
-# Task-Link Monorepo
+# Task-Link
 
-A professional monorepo structure for the Task-Link project, separating frontend and backend concerns.
+A professional structure for the Task-Link project, separating frontend and backend concerns.
 
 ## Project Structure
 
@@ -28,25 +28,23 @@ You can run the development servers using the following scripts from the root:
 
 - **Run Frontend**: `npm run frontend`
 - **Run Backend**: `npm run backend`
-- **Run Both**: `npm run start`
 
 ## Backend API Details
 
 ### Features
 - MongoDB (Mongoose) for storing users
-- Express for API routes (/api/signup, /api/login, /api/role)
+- Express for API routes (/api/auth/signup, /api/auth/login, /api/auth/role)
 - bcrypt for password hashing
 - JWT for authentication tokens
 - CORS setup for frontend connection
 - Environment variables for secure keys
 
 ### API Flow
-- **Signup**: `POST /api/signup` with `{ fullName, email, password }` → Returns user info.
-- **Select Role**: `POST /api/role` with `{ email, role }` → Updates user’s role.
-- **Login**: `POST /api/login` with `{ email, password }` → Verifies credentials, returns JWT + role.
+- **Signup**: `POST /api/auth/signup` with `{ fullName, email, password }` → Returns user info.
+- **Select Role**: `POST /api/auth/role` with `{ email, role }` → Updates user’s role.
+- **Login**: `POST /api/auth/login` with `{ email, password }` → Verifies credentials, returns JWT + role.
 
 ## Configuration
 
 - **Frontend**: Configuration is located in `frontend/vite.config.js`.
 - **Backend**: Configuration and environment variables are managed in the `backend/` directory.
-
