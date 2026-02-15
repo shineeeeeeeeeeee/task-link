@@ -6,6 +6,7 @@ import Role from "./pages/auth/Role";
 import CompanyMandatoryDetails from "./pages/auth/CompanyMandatoryDetails";
 import StudentMandatoryDetails from "./pages/auth/StudentMandatoryDetails";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentProfile from "./pages/student/StudentProfile";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyProfile from "./pages/company/CompanyProfile";
 import './App.css';
@@ -20,7 +21,8 @@ function App() {
         <Route path="/role" element={<Role />} />
         <Route path="/details/company" element={<CompanyMandatoryDetails />} />
         <Route path="/details/student" element={<StudentMandatoryDetails />} />
-        <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/s/:student_id" element={<StudentDashboard />} />
+        <Route path="/s/:student_id/profile" element={<StudentProfile />} />
         <Route path="/c/:companyId" element={<CompanyDashboard />} />
         <Route path="/c/:companyId/profile" element={<CompanyProfile />} />
       </Routes>

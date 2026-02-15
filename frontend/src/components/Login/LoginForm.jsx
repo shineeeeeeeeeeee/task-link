@@ -48,21 +48,28 @@ function LoginForm() {
         password: formData.password,
       });
 
-      // Store token in localStorage
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userEmail", res.data.user.email);
-      localStorage.setItem("userRole", res.data.user.role);
+      // Store token in sessionStorage (identity)
+      sessionStorage.setItem("token", res.data.token);
+      sessionStorage.setItem("userEmail", res.data.user.email);
+      sessionStorage.setItem("userRole", res.data.user.role);
 
       // Navigate to respective dashboard
       if (res.data.user.role === "student") {
-        navigate("/student/dashboard", { state: { fullName: res.data.user.fullName, email: res.data.user.email } });
+        //------------------------------------THIS HAS TO BE UPDATED-----------------------------------------------
+        // INSTEAD OF FULLNAME SOME UNIQUE STUDENT ID MUST BE USED TO IDENTIFY THE STUDENT.
+        const studentId = res.data.user.fullName.replace(/\s+/g, '-').toLowerCase();
+        sessionStorage.setItem("studentId", studentId);
+        sessionStorage.setItem("userName", res.data.user.fullName);
+        sessionStorage.setItem("userEmail", res.data.user.email);
+
+        navigate(`/s/${studentId}`, { state: { fullName: res.data.user.fullName, email: res.data.user.email } });
       } else if (res.data.user.role === "recruiter") {
         //------------------------------------THIS HAS TO BE UPDATED-----------------------------------------------
         // INSTEAD OF FULLNAME SOME UNIQUE COMPANY ID MUST BE USED TO IDENTIFY THE COMPANY.
         const companyId = res.data.user.fullName;
-        localStorage.setItem("tasklink_company_id", companyId);
-        localStorage.setItem("tasklink_company_name", res.data.user.fullName);
-        localStorage.setItem("tasklink_company_email", res.data.user.email);
+        sessionStorage.setItem("tasklink_company_id", companyId);
+        sessionStorage.setItem("tasklink_company_name", res.data.user.fullName);
+        sessionStorage.setItem("tasklink_company_email", res.data.user.email);
 
         navigate(`/c/${companyId}`, { state: { fullName: res.data.user.fullName, email: res.data.user.email } });
       }

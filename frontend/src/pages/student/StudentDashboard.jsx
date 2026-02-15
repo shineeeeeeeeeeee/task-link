@@ -24,93 +24,19 @@ import axios from "axios";
 function StudentDashboard() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const ACCOUNT_NAME = state?.fullName || "Student";
-  const ACCOUNT_EMAIL = state?.email || "student@example.com";
-
-  // Mock data 
-  // const [internships] = useState([
-  //   {
-  //     id: 1,
-  //     title: "Frontend Web Developer Intern",
-  //     company: "TechNova",
-  //     duration: "3 months",
-  //     location: "Remote",
-  //     stipend: "₹8,000 / month",
-  //     skills: ["React", "HTML", "CSS"],
-  //     shortDescription:
-  //       "Work on customer-facing interfaces using React and build responsive UI components.",
-  //     postedAt: "2 days ago",
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "Java Back-End Intern",
-  //     company: "ByteWorks",
-  //     duration: "2 months",
-  //     location: "Ahmedabad",
-  //     stipend: "₹6,000 / month",
-  //     skills: ["Java", "Spring", "SQL"],
-  //     shortDescription:
-  //       "Develop REST APIs and work with relational databases. Ideal for backend enthusiasts.",
-  //     postedAt: "5 days ago",
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "UI/UX Design Intern",
-  //     company: "CreativeCo",
-  //     duration: "1 month",
-  //     location: "Hybrid - Vadodara",
-  //     stipend: "Unpaid",
-  //     skills: ["Figma", "Prototyping"],
-  //     shortDescription:
-  //       "Design interfaces, create prototypes, and iterate based on user feedback.",
-  //     postedAt: "1 week ago",
-  //   },
-  //   {
-  //     id: 4,
-  //     title: "Fullstack Intern (MERN)",
-  //     company: "StackFlow Labs",
-  //     duration: "4 months",
-  //     location: "Remote",
-  //     stipend: "₹12,000 / month",
-  //     skills: ["MongoDB", "Express", "React", "Node"],
-  //     shortDescription:
-  //       "Build end-to-end features, own modules and deploy to staging environments.",
-  //     postedAt: "3 days ago",
-  //   },
-  //   {
-  //     id: 5,
-  //     title: "Data Science Intern",
-  //     company: "DataWorx",
-  //     duration: "3 months",
-  //     location: "Ahmedabad",
-  //     stipend: "₹10,000 / month",
-  //     skills: ["Python", "Pandas", "ML"],
-  //     shortDescription:
-  //       "Work on real datasets, build features and models to improve product analytics.",
-  //     postedAt: "4 days ago",
-  //   },
-  //   {
-  //     id: 6,
-  //     title: "DevOps Intern",
-  //     company: "CloudOps",
-  //     duration: "2 months",
-  //     location: "Vadodara",
-  //     stipend: "₹9,000 / month",
-  //     skills: ["Docker", "Kubernetes", "CI/CD"],
-  //     shortDescription:
-  //       "Help containerize services and maintain deployment pipelines.",
-  //     postedAt: "6 days ago",
-  //   },
-  // ]);
+  const ACCOUNT_NAME = state?.fullName || sessionStorage.getItem("userName") || localStorage.getItem("userName") || "Student";
+  const ACCOUNT_EMAIL = state?.email || sessionStorage.getItem("userEmail") || localStorage.getItem("userEmail") || "student@example.com";
+  const studentId = sessionStorage.getItem("studentId") || localStorage.getItem("studentId") || "demo-student";
 
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
+
   // fetch internships
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) {
           alert("Please login to access internships");
           setLoading(false);
@@ -126,7 +52,7 @@ function StudentDashboard() {
           company: "Recruiter", // temporary
           shortDescription: job.description,
         }));
-        
+
         setInternships(jobs);
 
       } catch (err) {
@@ -144,7 +70,7 @@ function StudentDashboard() {
   useEffect(() => {
     const fetchApplied = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) return;
 
         const res = await axios.get(
@@ -165,7 +91,7 @@ function StudentDashboard() {
   }, []);
 
   async function handleApply(internship) {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) {
       alert("Please login again");
       return;
@@ -175,7 +101,7 @@ function StudentDashboard() {
       await axios.post(
         "http://localhost:5001/api/applications",
         {
-          jobId: internship._id,  
+          jobId: internship._id,
         },
         {
           headers: {
@@ -196,9 +122,8 @@ function StudentDashboard() {
     }
   }
 
-
   async function handleSave(internship) {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) return alert("Please login again");
 
     try {
@@ -233,7 +158,7 @@ function StudentDashboard() {
   //       setLoading(false);
   //     }
   //   };
-  
+
   //   fetchJobs();
   // }, []);
 
@@ -241,19 +166,19 @@ function StudentDashboard() {
   //   const fetchApplied = async () => {
   //     try {
   //       const token = localStorage.getItem("token");
-  
+
   //       const res = await fetch("http://localhost:5001/api/applications/mine", {
   //         headers: {
   //           Authorization: `Bearer ${token}`,
   //         },
   //       });
-  
+
   //       const data = await res.json();
-  
+
   //       const appliedJobIds = data.applications.map(
   //         (app) => app.job._id
   //       );
-  
+
   //       setApplied(appliedJobIds);
   //     } catch (err) {
   //       console.error("Failed to fetch applied jobs", err);
@@ -261,7 +186,7 @@ function StudentDashboard() {
   //       setLoading(false);
   //     }
   //   };
-  
+
   //   fetchApplied();
   // }, []);  
 
@@ -342,12 +267,12 @@ function StudentDashboard() {
   // async function handleApply(internship) {
   //   try {
   //     const token = localStorage.getItem("token");
-  
+
   //     if (!token) {
   //       alert("Please login again");
   //       return;
   //     }
-  
+
   //     await axios.post(
   //       `http://localhost:5001/api/applications/${internship._id}/apply`,
   //       {},
@@ -357,9 +282,9 @@ function StudentDashboard() {
   //         },
   //       }
   //     );
-  
+
   //     setApplied((prev) => [...prev, internship._id]);
-  
+
   //     alert(`Applied to ${internship.title} at ${internship.company}`);
   //   } catch (err) {
   //     if (err.response?.status === 409) {
@@ -394,9 +319,10 @@ function StudentDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  {/* ------------------------------------------------------------------------------------------------------------------------------- */ }
   return (
     <div className="dashboard-wrapper">
-      {/* HEADER */}
+      {/* -------------------------------------------HEADER------------------------------------------------------ */}
       <header className="main-header">
         <div className="header-left">
           <img src={logo} alt="TaskLink" className="app-logo" />
@@ -424,7 +350,7 @@ function StudentDashboard() {
             <Bell size={20} />
             <span className="notif-badge"></span>
           </button>
-          <div className="user-nav-chip" onClick={() => navigate("/student/profile")}>
+          <div className="user-nav-chip" onClick={() => navigate(`/s/${studentId}/profile`)}>
             <div className="nav-avatar">
               {ACCOUNT_NAME.charAt(0).toUpperCase()}
             </div>
@@ -436,8 +362,9 @@ function StudentDashboard() {
         </div>
       </header>
 
+
+      {/* -------------------------------------------SIDEBAR------------------------------------------------------ */}
       <div className="dashboard-layout">
-        {/* SIDEBAR */}
         <aside className="dashboard-sidebar">
           <nav className="sidebar-nav">
             <div className="nav-group">
@@ -470,9 +397,9 @@ function StudentDashboard() {
           </nav>
         </aside>
 
-        {/* MAIN CONTENT */}
+        {/* -------------------------------------------MAIN CONTENT------------------------------------------------------ */}
         <main className="dashboard-main">
-          {/* FILTER & STAT BAR */}
+          {/* -------------------------------------------FILTER & STAT BAR------------------------------------------------------ */}
           <section className="dashboard-toolbar">
             <div className="toolbar-left">
               <div className="select-box">
@@ -541,7 +468,7 @@ function StudentDashboard() {
             </div>
           </section>
 
-          {/* INTERNSHIP SECTION */}
+          {/* -------------------------------------------INTERNSHIP SECTION------------------------------------------------------ */}
           <section className="feed-section">
             <div className="feed-header">
               <div className="feed-title-group">
@@ -577,7 +504,7 @@ function StudentDashboard() {
                   ))}
                 </div>
 
-                {/* PAGINATION */}
+                {/* -------------------------------------------PAGINATION------------------------------------------------------ */}
                 <div className="modern-pagination">
                   <button
                     className="p-nav-btn"
@@ -614,7 +541,9 @@ function StudentDashboard() {
           </section>
         </main>
       </div>
+      {/* ------------------------------------------------------------------------------------------------------- */}
 
+      {/* -------------------------------------------FOOTER------------------------------------------------------ */}
       <footer className="simple-dash-footer">
         <p>© {new Date().getFullYear()} TaskLink — Building Future Careers</p>
       </footer>
