@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
+import savedRoutes from "./routes/savedRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -46,6 +47,7 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/saved", savedRoutes);
 
 // test route
 app.get("/", (req, res) => res.send("Backend running successfully"));

@@ -52,6 +52,36 @@ export const applyToJob = async (req, res) => {
     }
 };
 
+export const withdrawApplication = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { jobId } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({ message: "jobId is required" });
+    }
+
+    const deleted = await Application.findOneAndDelete({
+      job: jobId,
+      student: studentId,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    await Job.updateOne(
+      { _id: jobId },
+      { $inc: { applicantsCount: -1 } }
+    );
+
+    return res.json({ message: "Application withdrawn" });
+
+  } catch (err) {
+    console.error("withdrawApplication error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 export const getMyApplications = async (req, res) => {
   try {

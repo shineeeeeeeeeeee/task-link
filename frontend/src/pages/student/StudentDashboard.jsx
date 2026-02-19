@@ -90,61 +90,98 @@ function StudentDashboard() {
     fetchApplied();
   }, []);
 
+  useEffect(() => {
+    const fetchSaved = async () => {
+      try {
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+        if (!token) return;
+  
+        const res = await axios.get(
+          "http://localhost:5001/api/saved",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+  
+        const savedIds = res.data.map((job) => job._id);
+        setSaved(savedIds);
+  
+      } catch (err) {
+        console.error("Failed to fetch saved jobs", err);
+      }
+    };
+  
+    fetchSaved();
+  }, []);
+  
   async function handleApply(internship) {
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  
     if (!token) {
       alert("Please login again");
       return;
     }
-
+  
     try {
-      await axios.post(
-        "http://localhost:5001/api/applications",
-        {
-          jobId: internship._id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setApplied((prev) => [...prev, internship._id]);
-      alert("Applied successfully");
-    } catch (err) {
-      if (err.response?.status === 409) {
-        alert("You have already applied to this job");
+      if (applied.includes(internship._id)) {
+        await axios.delete(
+          "http://localhost:5001/api/applications",
+          {
+            data: { jobId: internship._id },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+  
+        setApplied((prev) =>
+          prev.filter((id) => id !== internship._id)
+        );
+  
+        alert("Application withdrawn");
       } else {
-        alert("Failed to apply");
+        await axios.post(
+          "http://localhost:5001/api/applications",
+          { jobId: internship._id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+  
+        setApplied((prev) => [...prev, internship._id]);
+        alert("Applied successfully");
       }
+  
+    } catch (err) {
       console.error(err);
+      alert("Action failed");
     }
   }
 
   async function handleSave(internship) {
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) return alert("Please login again");
-
+  
     try {
-      const url = saved.includes(internship._id)
-        ? `/api/saved/${internship._id}/remove`
-        : `/api/saved/${internship._id}/add`;
-
-      await axios.post(`http://localhost:5001${url}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const isAlreadySaved = saved.includes(internship._id);
+  
+      const url = isAlreadySaved
+        ? `/api/saved/${internship._id}/unsave`
+        : `/api/saved/${internship._id}/save`;
+  
+      await axios.post(
+        `http://localhost:5001${url}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+  
       setSaved((prev) =>
-        saved.includes(internship._id)
+        isAlreadySaved
           ? prev.filter((id) => id !== internship._id)
           : [...prev, internship._id]
       );
+  
     } catch (err) {
       console.error(err);
       alert("Failed to update saved jobs");
     }
-  }
+  }  
 
 
   // useEffect(() => {
