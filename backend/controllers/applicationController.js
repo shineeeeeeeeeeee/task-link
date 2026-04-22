@@ -96,17 +96,79 @@ export const getMyApplications = async (req, res) => {
   }
 };
 
+// export const getApplicantsForJob = async (req, res) => {
+//   try {
+//     const recruiterId = req.user?.id;
+//     if (!recruiterId) return res.status(401).json({ message: "Unauthorized" });
+
+//     const { jobId } = req.params;
+//     const job = await Job.findOne({ _id: jobId, recruiter: recruiterId });
+//     if (!job) return res.status(404).json({ message: "Job not found" });
+
+//     const apps = await Application.find({ job: jobId }).populate("student", "fullName email resumePath").sort({ createdAt: -1 });
+//     return res.json({ applicants: apps });
+//   } catch (err) {
+//     console.error("getApplicantsForJob error:", err);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 export const getApplicantsForJob = async (req, res) => {
   try {
     const recruiterId = req.user?.id;
     if (!recruiterId) return res.status(401).json({ message: "Unauthorized" });
 
     const { jobId } = req.params;
+
     const job = await Job.findOne({ _id: jobId, recruiter: recruiterId });
     if (!job) return res.status(404).json({ message: "Job not found" });
 
-    const apps = await Application.find({ job: jobId }).populate("student", "fullName email").sort({ createdAt: -1 });
+    const apps = await Application.aggregate(
+    [
+      {
+        $match: {
+          $expr: {
+            $eq: [{ $toString: "$job" }, jobId]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "student",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: { path: "$user", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "student",
+          foreignField: "user",
+          as: "studentDetails"
+        }
+      },
+      {
+        $unwind: { path: "$studentDetails", preserveNullAndEmptyArrays: true }
+      },
+      {
+        $project: {
+          _id: 1,
+          status: 1,
+          createdAt: 1,
+          "student._id": "$user._id",
+          "student.fullName": "$user.fullName",
+          "student.email": "$user.email",
+          "student.resumePath": "$studentDetails.resumePath"
+        }
+      }
+    ]);
+
     return res.json({ applicants: apps });
+
   } catch (err) {
     console.error("getApplicantsForJob error:", err);
     return res.status(500).json({ message: "Server error" });

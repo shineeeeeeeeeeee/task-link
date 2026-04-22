@@ -16,9 +16,11 @@ import {
   LayoutDashboard,
   ExternalLink,
   ChevronRight,
-  MoreVertical
+  MoreVertical,
+  WandSparkles
 } from "lucide-react";
 import "../../pages/company/CompanyDashboard.css";
+import AnalysisResults from "../../components/AnalysisResults";
 import logo from "../../assets/logo.svg";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
@@ -66,6 +68,10 @@ export default function CompanyDashboard() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [applicants, setApplicants] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewResult, setReviewResult] = useState(null);
 
   const fetchDashboardData = async () => {
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
@@ -136,26 +142,6 @@ export default function CompanyDashboard() {
     return name ? name.charAt(0).toUpperCase() : "C";
   };
 
-  // Dummy data 
-  const applicants = [
-    {
-      id: 101,
-      name: "Shine Suri",
-      college: "GSFC University",
-      skills: ["Java", "Spring", "SQL"],
-      resume: "#",
-      shortlisted: false,
-    },
-    {
-      id: 102,
-      name: "Dhruvil Dhamecha",
-      college: "GSFC University",
-      skills: ["Java", "React", "Node.js", "MongoDB"],
-      resume: "#",
-      shortlisted: true,
-    }
-  ];
-
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3000);
@@ -201,6 +187,152 @@ export default function CompanyDashboard() {
       showToast("Delete failed", "error");
     }
   };
+
+  const handleApplicants = async (job) => 
+  {
+    try 
+    {
+      if (!job?.id) return;
+
+      setSelectedJob(job);
+
+      const selectedJobId = job.id;
+
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+
+      const res = await fetch(`${API_BASE}/api/applications/job/${selectedJobId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch applicants");
+      }
+
+      const data = await res.json();
+
+      const mappedApplicants = (data.applicants || []).map((app) => {
+        const resumePath = app.student?.resumePath;
+
+        const resumeUrl = resumePath
+          ? `${API_BASE}${resumePath.startsWith("/") ? "" : "/"}${resumePath}`
+          : "";
+
+        return {
+          id: app._id,
+          name: app.student?.fullName || "Unknown",
+          email: app.student?.email || "",
+          resume: resumeUrl,
+          status: app.status || "Applied",
+          shortlisted: app.status === "Shortlisted",
+          student: app.student,
+        };
+      });
+
+      setApplicants(mappedApplicants);
+
+      showToast("Applicants loaded successfully", "success");
+
+    } catch (e) {
+      console.error("Fetch applicants failed:", e);
+      showToast("Failed to load applicants", "error");
+    }
+  };
+
+const handleReviewResume = async (resumeUrl, job) => {
+  try {
+    if (!resumeUrl || !job?.id) {
+      console.error("Missing resume or job data");
+      return;
+    }
+
+    const token =
+      sessionStorage.getItem("token") || localStorage.getItem("token");
+
+    const jobDescriptionText = `
+ROLE: ${job.title}
+LOCATION: ${job.location}
+DURATION: ${job.duration}
+STIPEND: ${job.stipend}
+
+REQUIRED SKILLS:
+${job.skills?.map((skill) => `- ${skill}`).join("\n")}
+
+JOB DESCRIPTION:
+${job.description}
+`.trim();
+
+    // console.log("Original JD:\n", jobDescriptionText);
+
+    const formatRes = await fetch(`${API_BASE}/api/review/format-jd`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        text: jobDescriptionText,
+      }),
+    });
+
+    const formatData = await formatRes.json();
+    console.log("Format API response:", formatData);
+
+    const formattedJD =
+      formatData.formatted_text ||
+      formatData.formattedJD ||
+      formatData.result;
+
+    if (!formattedJD || formattedJD.includes("no text provided")) {
+      throw new Error("Invalid formatted JD returned from backend");
+    }
+
+    // console.log("Formatted JD:\n", formattedJD);
+
+    const resumeRes = await fetch(resumeUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!resumeRes.ok) {
+      throw new Error("Failed to fetch resume file");
+    }
+
+    const resumeBlob = await resumeRes.blob();
+
+    const formData = new FormData();
+    formData.append("job_description", formattedJD);
+    formData.append("resume", resumeBlob, "resume.pdf");
+
+    const analyzeRes = await fetch(`${API_BASE}/api/review/analyze`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!analyzeRes.ok) {
+      const errText = await analyzeRes.text();
+      throw new Error(`Analysis failed: ${errText}`);
+    }
+
+    const analysisData = await analyzeRes.json();
+
+    // console.log("🔥 AI Resume Review Result:");
+    // console.log(analysisData);
+
+    setReviewResult(analysisData);
+    setShowReview(true);
+
+  } catch (error) {
+    console.error("handleReviewResume error:", error);
+  }
+};
 
   const toggleStatus = async (id) => {
     try {
@@ -474,13 +606,10 @@ export default function CompanyDashboard() {
                           <span>{p.applicants} Applicants</span>
                         </div>
                         <div className="footer-btns">
-                          <button
-                            className={`btn-text ${p.status === "Open" ? "danger" : "success"}`}
-                            onClick={() => toggleStatus(p.id)}
-                          >
+                          <button className={`btn-text ${p.status === "Open" ? "danger" : "success"}`} onClick={() => toggleStatus(p.id)}>
                             {p.status === "Open" ? "Close" : "Reopen"}
                           </button>
-                          <button className="btn-outline-sm">View Applicants</button>
+                          <button className="btn-outline-sm" onClick={() => handleApplicants(p)}> View Applicants </button>
                         </div>
                       </div>
                     </div>
@@ -492,39 +621,51 @@ export default function CompanyDashboard() {
             {/* ---------------------------------------------------APPLICANTS SECTION----------------------------------------------- */}
             <section className="dashboard-section mt-32">
               <div className="section-header">
-                <h2 className="section-title">Recent Applicants</h2>
-                <button className="view-all-link">View all <ChevronRight size={16} /></button>
+                <h2 className="section-title">Applicants</h2>
+                <span className="count-badge">{applicants.length}</span>
               </div>
 
-              <div className="applicants-list">
-                {applicants.slice(0, 3).map((a) => (
-                  <div key={a.id} className="applicant-row">
-                    <div className="applicant-basic">
-                      <div className="initials-avatar">
-                        {a.name.split(" ").map(n => n[0]).join("")}
+              {applicants.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">👥</div>
+                  <h3>No applicants yet</h3>
+                  <p>Applicants will appear here once students apply.</p>
+                </div>
+              ) : (
+                <div className="applicants-list">
+                  {applicants.map((a) => (
+                    <div key={a.id} className="applicant-row">
+                      
+                      <div className="applicant-basic">
+                        <div className="initials-avatar">
+                          {a.name?.split(" ").map(n => n[0]).join("")}
+                        </div>
+
+                        <div className="applicant-info">
+                          <h4>{a.name}</h4>
+                          <p>{a.email}</p>
+                        </div>
                       </div>
-                      <div className="applicant-info">
-                        <h4>{a.name}</h4>
-                        <p>{a.college}</p>
+
+                      <div className="applicant-cta">
+                        <a href={a.resume} target="_blank" rel="noopener noreferrer" className="ghost-btn">
+                          <ExternalLink size={16} /> View Resume
+                        </a>
+
+                        <button className="review-resume-btn" onClick={() => handleReviewResume(a.resume, selectedJob)} >
+                          <WandSparkles size={16} strokeWidth={2} /> Review AI
+                        </button>
+
+                        <button className={`btn-icon-pill ${a.shortlisted ? "active" : ""}`}>
+                          <CheckCircle size={16} />
+                          <span>{a.shortlisted ? "Shortlisted" : "Shortlist"}</span>
+                        </button>
                       </div>
+
                     </div>
-                    <div className="applicant-skills">
-                      {a.skills.map((s, i) => (
-                        <span key={i} className="mini-chip">{s}</span>
-                      ))}
-                    </div>
-                    <div className="applicant-cta">
-                      <button className={`btn-icon-pill ${a.shortlisted ? "active" : ""}`}>
-                        <CheckCircle size={16} />
-                        <span>{a.shortlisted ? "Shortlisted" : "Shortlist"}</span>
-                      </button>
-                      <button className="ghost-btn">
-                        <ExternalLink size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </main>
         )}
@@ -632,7 +773,32 @@ export default function CompanyDashboard() {
           </div>
         </div>
       )}
+
       {/* ------------------------------------------------------------------------------------------------------------------------------- */}
+
+      {showReview && (
+        <div className="modal-backdrop" onClick={() => setShowReview(false)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "900px", width: "95%" }}
+          >
+            <div className="modal-header">
+              <h2>AI Resume Analysis</h2>
+              <button className="close-btn" onClick={() => setShowReview(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px", maxHeight: "75vh", overflowY: "auto" }}>
+              <AnalysisResults result={reviewResult} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------------------------------------------------------------------- */}
+
     </div>
   );
 }
