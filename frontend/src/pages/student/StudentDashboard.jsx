@@ -21,6 +21,8 @@ import logo from "../../assets/logo.svg";
 import { useEffect } from "react";
 import axios from "axios";
 
+import Chatbot from "../../components/Chatbot";
+
 function StudentDashboard() {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -584,6 +586,8 @@ function StudentDashboard() {
       <footer className="simple-dash-footer">
         <p>© {new Date().getFullYear()} TaskLink — Building Future Careers</p>
       </footer>
+
+      <Chatbot />
     </div>
   );
 }

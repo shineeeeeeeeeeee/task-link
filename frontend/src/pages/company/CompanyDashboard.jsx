@@ -67,6 +67,12 @@ export default function CompanyDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
+  // New state: selected job applicants shown in Recent Applicants
+  const [selectedJobApplicants, setSelectedJobApplicants] = useState([]);
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [selectedJobTitle, setSelectedJobTitle] = useState(null);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+
   const fetchDashboardData = async () => {
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) {
@@ -136,7 +142,7 @@ export default function CompanyDashboard() {
     return name ? name.charAt(0).toUpperCase() : "C";
   };
 
-  // Dummy data 
+  // Dummy applicants (still used as fallback)
   const applicants = [
     {
       id: 101,
@@ -196,6 +202,13 @@ export default function CompanyDashboard() {
       setPostings(updated);
       sessionStorage.setItem(CACHE_KEY_POSTINGS, JSON.stringify(updated));
       showToast("Internship deleted successfully", "success");
+
+      // If deleted posting was currently selected, clear the selected applicants
+      if (selectedJobId === id) {
+        setSelectedJobId(null);
+        setSelectedJobApplicants([]);
+        setSelectedJobTitle(null);
+      }
     } catch (e) {
       console.error("Delete failed:", e);
       showToast("Delete failed", "error");
@@ -219,6 +232,51 @@ export default function CompanyDashboard() {
     } catch (e) {
       console.error("Status update failed:", e);
       showToast("Status update failed", "error");
+    }
+  };
+
+  // New: fetch applicants for a job and set them as the Recent Applicants
+  const handleViewApplicants = async (job) => {
+    // Toggle off if already selected
+    if (selectedJobId === job.id) {
+      setSelectedJobId(null);
+      setSelectedJobApplicants([]);
+      setSelectedJobTitle(null);
+      return;
+    }
+
+    setLoadingApplicants(true);
+    setSelectedJobId(job.id);
+    setSelectedJobTitle(job.title);
+
+    try {
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+      // Assumed endpoint: GET /api/jobs/:id/applicants -> { applicants: [...] }
+      const res = await fetch(`${API_BASE}/api/jobs/${job.id}/applicants`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Normalize the applicant objects as needed
+        const apps = (data.applicants || []).map((a) => ({
+          id: a._id || a.id,
+          name: a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || "Candidate",
+          college: a.college || a.university || "",
+          skills: a.skills || [],
+          resume: a.resume || "#",
+          shortlisted: !!a.shortlisted,
+        }));
+        setSelectedJobApplicants(apps);
+      } else {
+        // If endpoint not available or returns error, fall back to dummy sample
+        setSelectedJobApplicants(applicants);
+      }
+    } catch (err) {
+      console.error("Failed to fetch applicants:", err);
+      setSelectedJobApplicants(applicants);
+    } finally {
+      setLoadingApplicants(false);
     }
   };
 
@@ -340,17 +398,14 @@ export default function CompanyDashboard() {
     </div>
   );
 
-  {/* ------------------------------------------------------------------------------------------------------------------------------- */ }
   return (
     <div className="dashboard-wrapper">
-      {/* ------------------------------------------------TOAST NOTIFICATION-------------------------------------------------*/}
       {toast.show && (
         <div className={`toast-message ${toast.type}`}>
           {toast.message}
         </div>
       )}
 
-      {/* ----------------------------------------------HEADER------------------------------------------------------- */}
       <header className="dashboard-header">
         <div className="header-container">
           <div className="header-brand">
@@ -376,7 +431,6 @@ export default function CompanyDashboard() {
         </div>
       </header>
 
-      {/* ----------------------------------------------SIDE BAR--------------------------------------------------- */}
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar">
           <nav className="sidebar-nav">
@@ -408,21 +462,18 @@ export default function CompanyDashboard() {
           </div>
         </aside>
 
-        {/* ---------------------------------------------------MAIN CONTENT----------------------------------------------- */}
         {loading && postings.length === 0 ? (
           renderSkeleton()
         ) : fetchError ? (
           renderError()
         ) : (
           <main className="dashboard-content">
-            {/* ---------------------------------------------------DASHBOARD SECTION----------------------------------------------- */}
             <section className="dashboard-section">
               <div className="section-header">
                 <h2 className="section-title">My Internship Postings</h2>
                 <span className="count-badge">{postings.length} Active</span>
               </div>
 
-              {/* ---------------------------------------------------POSTINGS GRID----------------------------------------------- */}
               {postings.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">📝</div>
@@ -480,7 +531,12 @@ export default function CompanyDashboard() {
                           >
                             {p.status === "Open" ? "Close" : "Reopen"}
                           </button>
-                          <button className="btn-outline-sm">View Applicants</button>
+                          <button
+                            className="btn-outline-sm"
+                            onClick={() => handleViewApplicants(p)}
+                          >
+                            {selectedJobId === p.id ? "Hide Applicants" : "View Applicants"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -489,15 +545,28 @@ export default function CompanyDashboard() {
               )}
             </section>
 
-            {/* ---------------------------------------------------APPLICANTS SECTION----------------------------------------------- */}
             <section className="dashboard-section mt-32">
               <div className="section-header">
-                <h2 className="section-title">Recent Applicants</h2>
-                <button className="view-all-link">View all <ChevronRight size={16} /></button>
+                <h2 className="section-title">
+                  {selectedJobTitle ? `Applicants for: ${selectedJobTitle}` : "Recent Applicants"}
+                </h2>
+                <button
+                  className="view-all-link"
+                  onClick={() => {
+                    // Clear selection to show default recent applicants
+                    setSelectedJobId(null);
+                    setSelectedJobApplicants([]);
+                    setSelectedJobTitle(null);
+                  }}
+                >
+                  {selectedJobTitle ? "View all" : "View all"} <ChevronRight size={16} />
+                </button>
               </div>
 
               <div className="applicants-list">
-                {applicants.slice(0, 3).map((a) => (
+                {loadingApplicants ? (
+                  <div style={{ padding: 16 }}>Loading applicants...</div>
+                ) : (selectedJobApplicants.length ? selectedJobApplicants : applicants.slice(0, 3)).map((a) => (
                   <div key={a.id} className="applicant-row">
                     <div className="applicant-basic">
                       <div className="initials-avatar">
@@ -530,7 +599,6 @@ export default function CompanyDashboard() {
         )}
       </div>
 
-      {/* ---------------------------------------------------REFINED MODAL FORM----------------------------------------------- */}
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -632,7 +700,6 @@ export default function CompanyDashboard() {
           </div>
         </div>
       )}
-      {/* ------------------------------------------------------------------------------------------------------------------------------- */}
     </div>
   );
 }
