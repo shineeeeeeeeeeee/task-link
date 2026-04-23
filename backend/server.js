@@ -8,24 +8,13 @@ import fs from "fs";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import savedRoutes from "./routes/savedRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
 
 import chatbotRoute from "./routes/chatbot.js";
 import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 const app = express();
-
-const uploadDirs = [
-    "uploads/resumes",
-    "uploads/company/logos",
-    "uploads/company/docs"
-];
-uploadDirs.forEach((dir) => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-
-// static files (uploads)
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // CORS globally
 app.use(
@@ -44,6 +33,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
+// static files (uploads)
+app.use(
+  "/uploads",
+  cors({ origin: "http://localhost:5173" }),
+  express.static(path.join(process.cwd(), "uploads"))
+);
+
+const uploadDirs = [
+    "uploads/resumes",
+    "uploads/company/logos",
+    "uploads/company/docs"
+];
+uploadDirs.forEach((dir) => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
 connectDB();
 
 // routes
@@ -54,6 +59,7 @@ app.use("/api/users", userRoutes); // for chatbot
 
 app.use("/api/applications", applicationRoutes);
 app.use("/api/saved", savedRoutes);
+app.use("/api/review", reviewRoutes);
 
 // test route
 app.get("/", (req, res) => res.send("Backend running successfully"));
