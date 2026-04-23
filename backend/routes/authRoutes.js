@@ -114,6 +114,4 @@ router.put("/details/company", protect, async (req, res) => {
     }
 });
 
-
-
 export default router;
