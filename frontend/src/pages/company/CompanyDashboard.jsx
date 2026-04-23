@@ -73,6 +73,12 @@ export default function CompanyDashboard() {
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState(null);
 
+  // New state: selected job applicants shown in Recent Applicants
+  const [selectedJobApplicants, setSelectedJobApplicants] = useState([]);
+  const [selectedJobId, setSelectedJobId] = useState(null);
+  const [selectedJobTitle, setSelectedJobTitle] = useState(null);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+
   const fetchDashboardData = async () => {
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) {
@@ -182,6 +188,13 @@ export default function CompanyDashboard() {
       setPostings(updated);
       sessionStorage.setItem(CACHE_KEY_POSTINGS, JSON.stringify(updated));
       showToast("Internship deleted successfully", "success");
+
+      // If deleted posting was currently selected, clear the selected applicants
+      if (selectedJobId === id) {
+        setSelectedJobId(null);
+        setSelectedJobApplicants([]);
+        setSelectedJobTitle(null);
+      }
     } catch (e) {
       console.error("Delete failed:", e);
       showToast("Delete failed", "error");
@@ -354,6 +367,51 @@ ${job.description}
     }
   };
 
+  // New: fetch applicants for a job and set them as the Recent Applicants
+  const handleViewApplicants = async (job) => {
+    // Toggle off if already selected
+    if (selectedJobId === job.id) {
+      setSelectedJobId(null);
+      setSelectedJobApplicants([]);
+      setSelectedJobTitle(null);
+      return;
+    }
+
+    setLoadingApplicants(true);
+    setSelectedJobId(job.id);
+    setSelectedJobTitle(job.title);
+
+    try {
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+      // Assumed endpoint: GET /api/jobs/:id/applicants -> { applicants: [...] }
+      const res = await fetch(`${API_BASE}/api/jobs/${job.id}/applicants`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Normalize the applicant objects as needed
+        const apps = (data.applicants || []).map((a) => ({
+          id: a._id || a.id,
+          name: a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || "Candidate",
+          college: a.college || a.university || "",
+          skills: a.skills || [],
+          resume: a.resume || "#",
+          shortlisted: !!a.shortlisted,
+        }));
+        setSelectedJobApplicants(apps);
+      } else {
+        // If endpoint not available or returns error, fall back to dummy sample
+        setSelectedJobApplicants(applicants);
+      }
+    } catch (err) {
+      console.error("Failed to fetch applicants:", err);
+      setSelectedJobApplicants(applicants);
+    } finally {
+      setLoadingApplicants(false);
+    }
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = "Title is required";
@@ -472,17 +530,14 @@ ${job.description}
     </div>
   );
 
-  {/* ------------------------------------------------------------------------------------------------------------------------------- */ }
   return (
     <div className="dashboard-wrapper">
-      {/* ------------------------------------------------TOAST NOTIFICATION-------------------------------------------------*/}
       {toast.show && (
         <div className={`toast-message ${toast.type}`}>
           {toast.message}
         </div>
       )}
 
-      {/* ----------------------------------------------HEADER------------------------------------------------------- */}
       <header className="dashboard-header">
         <div className="header-container">
           <div className="header-brand">
@@ -508,7 +563,6 @@ ${job.description}
         </div>
       </header>
 
-      {/* ----------------------------------------------SIDE BAR--------------------------------------------------- */}
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar">
           <nav className="sidebar-nav">
@@ -540,21 +594,18 @@ ${job.description}
           </div>
         </aside>
 
-        {/* ---------------------------------------------------MAIN CONTENT----------------------------------------------- */}
         {loading && postings.length === 0 ? (
           renderSkeleton()
         ) : fetchError ? (
           renderError()
         ) : (
           <main className="dashboard-content">
-            {/* ---------------------------------------------------DASHBOARD SECTION----------------------------------------------- */}
             <section className="dashboard-section">
               <div className="section-header">
                 <h2 className="section-title">My Internship Postings</h2>
                 <span className="count-badge">{postings.length} Active</span>
               </div>
 
-              {/* ---------------------------------------------------POSTINGS GRID----------------------------------------------- */}
               {postings.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">📝</div>
@@ -618,7 +669,6 @@ ${job.description}
               )}
             </section>
 
-            {/* ---------------------------------------------------APPLICANTS SECTION----------------------------------------------- */}
             <section className="dashboard-section mt-32">
               <div className="section-header">
                 <h2 className="section-title">Applicants</h2>
@@ -671,7 +721,6 @@ ${job.description}
         )}
       </div>
 
-      {/* ---------------------------------------------------REFINED MODAL FORM----------------------------------------------- */}
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

@@ -53,6 +53,8 @@ function LoginForm() {
       sessionStorage.setItem("userEmail", res.data.user.email);
       sessionStorage.setItem("userRole", res.data.user.role);
 
+      sessionStorage.setItem("userId", res.data.user._id);  // for chatbot imp
+
       // Navigate to respective dashboard
       if (res.data.user.role === "student") {
         //------------------------------------THIS HAS TO BE UPDATED-----------------------------------------------
